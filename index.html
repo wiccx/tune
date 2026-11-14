@@ -8,7 +8,402 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="strict<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Tune Finder</title>
+<style>
+:root{--h:320;--top:300px;--accent:hsl(var(--h) 100% 66%);--ink:#eef0ff;--muted:#c9cee3;--glass:transparent;--edge:rgba(255,255,255,.35);color-scheme:dark}
+*{box-sizing:border-box}
+html{background:#000}body,html{margin:0}body{background:transparent}
+body{color:var(--ink);font:16px/1.45 "Trebuchet MS",system-ui,sans-serif;text-shadow:0 1px 3px #000,0 0 10px #000;max-width:760px;margin:0 auto;padding:var(--top) 16px calc(40px + env(safe-area-inset-bottom,0px));min-height:100vh}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+body>*:not(#sky):not(h1):not(#brand){position:relative;z-index:1}
+h1{z-index:1}
+h1{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:0;right:0;text-align:center;margin:0;font-size:1.5rem;font-weight:800;letter-spacing:.18em;text-shadow:0 0 18px var(--accent)}
+.glass{background:transparent;border:1px solid var(--edge);border-radius:16px}
+form{display:flex;flex-wrap:wrap;gap:8px;padding:8px}
+input{-webkit-appearance:none;appearance:none;flex:1;min-width:0;font:inherit;padding:12px 14px;border:0;border-radius:10px;background:transparent;color:var(--ink)}
+input::placeholder{color:var(--muted)}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:12px 18px;background:var(--accent);color:#0a0714;font-weight:800;box-shadow:0 0 18px var(--accent);transition:transform .15s}
+button:active{transform:scale(.94)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{display:none;align-items:center;gap:8px;margin:14px 0 6px;padding:6px 8px;border:1px solid var(--edge);border-radius:16px}
+.bar button{background:transparent;color:var(--ink);border:1px solid var(--edge);box-shadow:none;padding:0;width:44px;height:44px;flex:none;border-radius:50%;font-size:1rem;text-shadow:none}
+.bar input{padding:0;accent-color:var(--accent);height:44px}
+#time{min-width:2.6em;text-align:right;font-size:.85rem;color:var(--muted)}
+.src{display:flex;gap:8px;flex:0 0 100%}
+.src button{background:transparent;color:var(--ink);border:1px solid var(--edge);box-shadow:none;padding:8px 16px;font-weight:600;text-shadow:none}
+.src button.on{border-color:var(--accent);box-shadow:0 0 14px -2px var(--accent)}
+.bar a.dl{display:none;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:1px solid var(--accent);border-radius:50%;color:var(--ink);text-decoration:none;font-size:1.05rem;text-shadow:none;box-shadow:0 0 12px -2px var(--accent)}
+#ytwrap{display:none;aspect-ratio:16/9;border-radius:12px;overflow:hidden;margin:8px 0;border:1px solid var(--edge)}
+#ytwrap iframe{width:100%;height:100%;display:block}
+#now{margin:8px 2px 12px;color:var(--muted);min-height:1.4em}
+ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+li{animation:in .4s both}
+@keyframes in{from{opacity:0;transform:translateX(-22px) scale(.97)}to{opacity:1;transform:none}}
+li button{width:100%;display:flex;gap:12px;align-items:center;text-align:left;background:transparent;color:var(--ink);border:1px solid var(--edge);padding:8px;font-weight:400;box-shadow:none;min-height:60px}
+li button:hover{border-color:var(--accent)}
+li button.on{border-color:var(--accent);box-shadow:0 0 22px -4px var(--accent),inset 4px 0 0 var(--accent)}
+li img{width:54px;height:54px;object-fit:cover;border-radius:50%;flex:none;background:rgba(255,255,255,.1)}
+li b{display:block}
+li span{color:var(--muted);font-size:.85rem}
+.msg{color:var(--muted);text-align:center;padding:0 8px}
+#brand{position:fixed;left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:2;font-size:.85rem;font-weight:800;letter-spacing:.2em;color:var(--ink);opacity:.45;pointer-events:none}
+@media (max-width:480px){h1{font-size:1.1rem;letter-spacing:.14em}body{padding-left:12px;padding-right:12px}button{padding:12px 14px}li img{width:48px;height:48px}li b{font-size:.95rem}}
+@media (prefers-reduced-motion:reduce){li{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<h1>TUNE FINDER</h1>
+<div id="brand">WICCX</div>
+<form id="f" class="glass">
+  <div id="src" class="src" role="group" aria-label="Music source">
+    <button type="button" data-s="yt" class="on">YouTube</button>
+    <button type="button" data-s="au">Audius</button>
+  </div>
+  <input id="q" type="search" placeholder="Song, artist or genre" aria-label="Search music" autocomplete="off">
+  <button>Search</button>
+</form>
+<div id="bar" class="bar">
+  <button id="prev" aria-label="Previous track">&#x23EE;&#xFE0E;</button>
+  <button id="pp" aria-label="Play or pause">&#x25B6;&#xFE0E;</button>
+  <button id="next" aria-label="Next track">&#x23ED;&#xFE0E;</button>
+  <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek">
+  <span id="time">0:00</span>
+  <a id="dl" class="dl" href="#" target="_blank" rel="noopener" aria-label="Download this track" title="Free download">&#x2B07;&#xFE0E;</a>
+</div>
+<audio id="aud"></audio>
+<div id="ytwrap"><div id="yt"></div></div>
+<p id="now"></p>
+<ul id="list"></ul>
+<p class="msg" id="msg">Search for a song and each search flies to the next planet. YouTube has the biggest catalog. Audius has independent music, and tracks marked free download can be saved.</p>
+
+<script>
+const $=id=>document.getElementById(id);
+
+/* ---------- first-person solar system ---------- */
+const cv=$('sky'),ctx=cv.getContext('2d');
+const calm=matchMedia('(prefers-reduced-motion:reduce)').matches?0.1:0.3;
+const PL=[
+ {n:'Mercury',h:30, r:62, sz:3.2,c:['#e4e4e4','#868686','#141414'],w:.0005},
+ {n:'Venus',  h:40, r:88, sz:5.2,c:['#f2f2f2','#a8a8a8','#1c1c1c'],w:.00037,atm:1},
+ {n:'Earth',  h:210,r:116,sz:5.6,c:['#ffffff','#9a9a9a','#101010'],w:.0003,earth:1,atm:1,moons:[{d:13,w:.0016,s:1.3}]},
+ {n:'Mars',   h:15, r:144,sz:4.4,c:['#dcdcdc','#767676','#0e0e0e'],w:.00024},
+ {n:'Jupiter',h:28, r:196,sz:13, c:['#f4f4f4','#8e8e8e','#121212'],w:.00014,bands:1,moons:[{d:26,w:.0013,s:1.6},{d:33,w:.0008,s:1.4}]},
+ {n:'Saturn', h:45, r:250,sz:10, c:['#ececec','#9c9c9c','#101010'],w:.00011,bands:1,ring:1},
+ {n:'Uranus', h:180,r:298,sz:7.5,c:['#e0e0e0','#808080','#0c0c0c'],w:.00008},
+ {n:'Neptune',h:225,r:340,sz:7.3,c:['#cfcfcf','#6c6c6c','#080808'],w:.000065}
+];
+const PSZ=1.4,SUN=22,MOONC={c:['#e6e6e6','#8a8a8a','#101010']};
+PL.forEach((p,k)=>p.a=k*.9+1);
+const S={hue:210,target:210,pulse:0,focus:-1,playing:false};
+let W,H,cx,cy,F,sunR,fr,shownHue=-1,camP=null,camT=null,fromP=null,fromT=null,tr=1,lastFocus=-1,lastT=0;
+
+// stars live on a sphere around the camera, with a dense band like the Milky Way
+const sky=Array.from({length:1500},(_,i)=>{
+  let x,y,z;
+  if(i%100<62){
+    const a=Math.random()*6.283,b=(Math.random()+Math.random()+Math.random()-1.5)*.17;
+    const px=Math.cos(a)*Math.cos(b),py=Math.sin(b),pz=Math.sin(a)*Math.cos(b),c=Math.cos(.5),sn=Math.sin(.5);
+    x=px*c-py*sn;y=px*sn+py*c;z=pz;
+  }else{
+    y=Math.random()*2-1;const a=Math.random()*6.283,r=Math.sqrt(1-y*y);x=Math.cos(a)*r;z=Math.sin(a)*r;
+  }
+  return{x,y,z,m:Math.random()};
+});
+const belt=Array.from({length:260},()=>({a:Math.random()*6.283,r:164+Math.random()*20,y:(Math.random()-.5)*4,s:Math.random()*.5+.3}));
+
+function resize(){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+  cx=W/2;cy=Math.max(125,Math.min(H*.3,250));
+  F=Math.min(Math.max(W,H*.75),1100);
+  sunR=Math.min(W*.3,130);fr=Math.min(70,W*.19);
+  document.documentElement.style.setProperty('--top',Math.round(cy+Math.max(sunR,fr*1.6)+34)+'px');
+}
+addEventListener('resize',resize);resize();
+
+function basis(P,T){
+  let fx=T.x-P.x,fy=T.y-P.y,fz=T.z-P.z;const fl=Math.hypot(fx,fy,fz)||1;fx/=fl;fy/=fl;fz/=fl;
+  let rx=-fz,rz=fx;const rl=Math.hypot(rx,rz)||1;rx/=rl;rz/=rl;
+  return{f:[fx,fy,fz],r:[rx,0,rz],u:[-rz*fy,rz*fx-rx*fz,rx*fy]};
+}
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+
+function sphere(c,bands,earth,X,Y,rad,t,dx,dy,lz){
+  ctx.save();ctx.beginPath();ctx.arc(X,Y,rad,0,7);ctx.clip();
+  let g=ctx.createRadialGradient(X+dx*rad*.55,Y+dy*rad*.55,rad*.05,X+dx*rad*.3,Y+dy*rad*.3,rad*1.7);
+  g.addColorStop(0,c[0]);g.addColorStop(.5,c[1]);g.addColorStop(1,c[2]);
+  ctx.fillStyle=g;ctx.fillRect(X-rad,Y-rad,rad*2,rad*2);
+  if(bands)for(let i=0;i<9;i++){ctx.fillStyle=i%2?'rgba(255,255,255,.14)':'rgba(0,0,0,.28)';ctx.fillRect(X-rad,Y-rad+rad*2*((i+.5)/9),rad*2,rad*.14)}
+  if(earth)for(let i=0;i<3;i++){
+    const ex=X-rad+((t*.012*calm+i*rad*.9)%(rad*2.6));
+    ctx.fillStyle='rgba(0,0,0,.45)';ctx.beginPath();ctx.ellipse(ex,Y+(i-1)*rad*.4,rad*.4,rad*.24,i,0,7);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.ellipse(ex+rad*.5,Y+(1-i)*rad*.35,rad*.5,rad*.1,0,0,7);ctx.fill();
+  }
+  g=ctx.createRadialGradient(X+dx*rad*.4,Y+dy*rad*.4,rad*.6,X,Y,rad*1.15);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.88)');
+  ctx.fillStyle=g;ctx.fillRect(X-rad,Y-rad,rad*2,rad*2);
+  if(lz>0){ctx.fillStyle=`rgba(0,0,0,${Math.min(.8,lz*.7)})`;ctx.fillRect(X-rad,Y-rad,rad*2,rad*2)}
+  ctx.restore();
+}
+
+function ringHalf(X,Y,rad,ratio,near,top){
+  const a0=top?Math.PI:0,a1=top?Math.PI*2:Math.PI;
+  ctx.lineWidth=Math.max(1,rad*.42*Math.max(ratio,.35));ctx.strokeStyle='rgba(235,235,235,.7)';
+  ctx.beginPath();ctx.ellipse(X,Y,rad*2.1,rad*2.1*ratio,0,a0,a1);ctx.stroke();
+  ctx.lineWidth=Math.max(.6,rad*.08*Math.max(ratio,.35));ctx.strokeStyle='rgba(0,0,0,.6)';
+  ctx.beginPath();ctx.ellipse(X,Y,rad*1.78,rad*1.78*ratio,0,a0,a1);ctx.stroke();
+}
+
+function lightVec(p,B){
+  const L=Math.hypot(p.x,p.y,p.z)||1,v=[-p.x/L,-p.y/L,-p.z/L];
+  return{dx:dot(v,B.r),dy:-dot(v,B.u),lz:dot(v,B.f)};
+}
+
+function frame(t){
+  S.hue+=((((S.target-S.hue)%360)+540)%360-180)*.05;
+  S.pulse*=.93;
+  if(Math.round(S.hue)!==shownHue){shownHue=Math.round(S.hue);document.documentElement.style.setProperty('--h',((shownHue%360)+360)%360)}
+
+  const q=PL.map(p=>{const a=p.a+t*p.w*calm;return{x:Math.cos(a)*p.r,y:0,z:Math.sin(a)*p.r}});
+  let TP,TT;
+  if(S.focus<0){
+    const D=SUN*F/sunR;TT={x:0,y:0,z:0};TP={x:Math.sin(.35)*D,y:D*.07,z:Math.cos(.35)*D};
+  }else{
+    const pl=PL[S.focus],p=q[S.focus],D=pl.sz*PSZ*F/(pl.ring?fr*.62:fr);
+    const L=Math.hypot(p.x,p.z)||1,sx=-p.x/L,sz=-p.z/L,c=Math.cos(.7),sn=Math.sin(.7);
+    TT=p;TP={x:p.x+(sx*c-sz*sn)*D,y:D*.2,z:p.z+(sx*sn+sz*c)*D};
+  }
+  // glide from where the camera was to the new target, then follow the planet exactly
+  const dt=Math.min(50,t-lastT);lastT=t;
+  if(!camP){camP={...TP};camT={...TT};tr=1;lastFocus=S.focus}
+  if(S.focus!==lastFocus){fromP={...camP};fromT={...camT};tr=0;lastFocus=S.focus}
+  tr=Math.min(1,tr+dt/7000);
+  const sm=tr*tr*(3-2*tr);
+  for(const k of['x','y','z']){
+    camP[k]=fromP?fromP[k]+(TP[k]-fromP[k])*sm:TP[k];
+    camT[k]=fromT?fromT[k]+(TT[k]-fromT[k])*sm:TT[k];
+  }
+  const B=basis(camP,camT),P=camP;
+  const proj=(x,y,z)=>{
+    const d=[x-P.x,y-P.y,z-P.z],zz=dot(d,B.f);
+    if(zz<.5)return null;
+    return{X:cx+dot(d,B.r)/zz*F,Y:cy-dot(d,B.u)/zz*F,z:zz};
+  };
+
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  for(const s of sky){
+    const v=[s.x,s.y,s.z],zz=dot(v,B.f);
+    if(zz<.05)continue;
+    const X=cx+dot(v,B.r)/zz*F,Y=cy-dot(v,B.u)/zz*F;
+    if(X<-5||X>W+5||Y<-5||Y>H+5)continue;
+    const m=s.m*s.m*s.m;
+    ctx.fillStyle=`rgba(255,255,255,${.2+.8*m})`;
+    const z=.6+1.3*m;ctx.fillRect(X,Y,z,z);
+  }
+  ctx.fillStyle='rgba(235,235,235,.7)';
+  for(const b of belt){
+    const a=b.a+t*.00012*calm,pr=proj(Math.cos(a)*b.r,b.y,Math.sin(a)*b.r);
+    if(!pr||pr.X<0||pr.X>W||pr.Y<0||pr.Y>H)continue;
+    const z=Math.min(6,Math.max(.8,b.s*F/pr.z*.4));ctx.fillRect(pr.X,pr.Y,z,z);
+  }
+
+  const objs=[{k:'sun',p:{x:0,y:0,z:0}}];
+  PL.forEach((pl,k)=>{
+    objs.push({k:'pl',i:k,p:q[k]});
+    if(pl.moons)for(const m of pl.moons){
+      const a=t*m.w*calm+k;
+      objs.push({k:'moon',m,p:{x:q[k].x+Math.cos(a)*m.d,y:0,z:q[k].z+Math.sin(a)*m.d}});
+    }
+  });
+  for(const o of objs){const pr=proj(o.p.x,o.p.y,o.p.z);o.pr=pr;o.zz=pr?pr.z:-1}
+  objs.sort((m,n)=>n.zz-m.zz);
+
+  for(const o of objs){
+    const pr=o.pr;if(!pr)continue;
+    const X=pr.X,Y=pr.Y;
+    if(o.k==='sun'){
+      const rad=SUN/pr.z*F;
+      if(X<-rad*8||X>W+rad*8||Y<-rad*8||Y>H+rad*8||rad>W*8)continue;
+      let g=ctx.createRadialGradient(X,Y,rad*.8,X,Y,rad*5);
+      g.addColorStop(0,'rgba(255,255,255,.4)');g.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,rad*5,0,7);ctx.fill();
+      g=ctx.createRadialGradient(X,Y,0,X,Y,rad);
+      g.addColorStop(0,'#f4f4f4');g.addColorStop(.7,'#9a9a9a');g.addColorStop(1,'#3a3a3a');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,rad,0,7);ctx.fill();
+    }else if(o.k==='pl'){
+      const pl=PL[o.i],rad=Math.max(.8,pl.sz*PSZ/pr.z*F);
+      if(X<-rad*4||X>W+rad*4||Y<-rad*4||Y>H+rad*4||rad>W*6)continue;
+      const lv=lightVec(o.p,B);
+      let ratio=0,topNear=false;
+      if(pl.ring){ratio=Math.max(.12,Math.abs(B.f[1]));topNear=B.f[1]>0}
+      if(pl.atm){
+        const g=ctx.createRadialGradient(X,Y,rad*.97,X,Y,rad*1.14);
+        g.addColorStop(0,'rgba(255,255,255,.25)');g.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(X,Y,rad*1.14,0,7);ctx.fill();
+      }
+      if(pl.ring)ringHalf(X,Y,rad,ratio,false,!topNear);
+      sphere(pl.c,pl.bands,pl.earth,X,Y,rad,t,lv.dx,lv.dy,lv.lz);
+      if(pl.ring)ringHalf(X,Y,rad,ratio,true,topNear);
+    }else{
+      const rad=Math.max(.7,o.m.s*PSZ/pr.z*F);
+      if(X<-rad||X>W+rad||Y<-rad||Y>H+rad||rad>W*6)continue;
+      const lv=lightVec(o.p,B);
+      sphere(MOONC.c,0,0,X,Y,rad,t,lv.dx,lv.dy,lv.lz);
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- music (YouTube + Audius) ---------- */
+const KEY='AIzaSyDT1RhbmVLdxJHzTqU33Zm3t3Zy6rXvwx0';
+const API='https://api.audius.co/v1',APP='tune-finder';
+const bar=$('bar'),pp=$('pp'),seek=$('seek'),tm=$('time'),dl=$('dl'),aud=$('aud');
+const PAUSE='&#x23F8;&#xFE0E;',PLAY='&#x25B6;&#xFE0E;';
+let source='yt',cur=null,results=[],idx=-1,yt=null,ytReady=false,pending=null,seeking=false;
+const fmt=x=>isFinite(x)?Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0'):'0:00';
+const decode=x=>{const t=document.createElement('textarea');t.innerHTML=x;return t.value};
+
+document.querySelectorAll('#src button').forEach(b=>b.onclick=()=>{
+  source=b.dataset.s;
+  document.querySelectorAll('#src button').forEach(x=>x.classList.toggle('on',x===b));
+  if($('q').value.trim())doSearch(false);
+  else $('msg').textContent='Searching with '+(source==='yt'?'YouTube':'Audius')+'. Type a song to start.';
+});
+
+const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);
+window.onYouTubeIframeAPIReady=()=>{
+  yt=new YT.Player('yt',{width:'100%',height:'100%',playerVars:Object.assign({playsinline:1,autoplay:1,rel:0},/^https?:$/.test(location.protocol)?{origin:location.origin}:{}),events:{
+    onReady:()=>{ytReady=true;if(pending!==null){const p=pending;pending=null;play(p)}},
+    onStateChange:e=>{
+      if(cur!=='yt')return;
+      S.playing=e.data===1;
+      pp.innerHTML=e.data===1?PAUSE:PLAY;
+      if(e.data===0)play(idx+1);
+    },
+    onError:e=>{
+      if(cur!=='yt')return;
+      const n=$('now'),id=results[idx]&&results[idx].id,link=id?' <a href="https://www.youtube.com/watch?v='+id+'" target="_blank" rel="noopener" style="color:var(--accent)">Open on YouTube</a>':'';
+      if(e.data===153||e.data===152||location.protocol==='file:'){
+        n.innerHTML='YouTube blocked the player (error '+e.data+'). This happens when the page is opened as a file. Upload it to a website such as GitHub Pages or Netlify and open it from there.'+link;
+      }else{
+        n.textContent='This video cannot be played here. Skipping to the next one…';
+        setTimeout(()=>play(idx+1),1200);
+      }
+    }}});
+};
+
+aud.addEventListener('play',()=>{if(cur==='au'){S.playing=true;pp.innerHTML=PAUSE}});
+aud.addEventListener('pause',()=>{if(cur==='au'){S.playing=false;pp.innerHTML=PLAY}});
+aud.addEventListener('ended',()=>{if(cur==='au')play(idx+1)});
+aud.addEventListener('error',()=>{if(cur==='au'&&aud.src)$('now').textContent='This track failed to load. Try another result.'});
+
+setInterval(()=>{
+  if(idx<0)return;
+  let c,d;
+  if(cur==='au'){c=aud.currentTime;d=aud.duration}
+  else if(ytReady&&yt&&yt.getCurrentTime){c=yt.getCurrentTime();d=yt.getDuration()}
+  else return;
+  if(!seeking&&d)seek.value=c/d*1000;
+  tm.textContent=fmt(c);
+},500);
+
+pp.onclick=()=>{
+  if(cur==='au'){aud.paused?aud.play():aud.pause()}
+  else if(ytReady){yt.getPlayerState()===1?yt.pauseVideo():yt.playVideo()}
+};
+$('prev').onclick=()=>play(idx-1);
+$('next').onclick=()=>play(idx+1);
+seek.addEventListener('input',()=>{seeking=true});
+seek.addEventListener('change',()=>{
+  if(cur==='au'){if(aud.duration)aud.currentTime=seek.value/1000*aud.duration}
+  else if(ytReady){const d=yt.getDuration();if(d)yt.seekTo(seek.value/1000*d,true)}
+  seeking=false;
+});
+
+async function searchYT(q){
+  const u='https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoCategoryId=10&videoEmbeddable=true&maxResults=15&q='+encodeURIComponent(q)+'&key='+KEY;
+  const r=await fetch(u),d=await r.json();
+  if(!r.ok){
+    const why=d.error&&d.error.errors&&d.error.errors[0]&&d.error.errors[0].reason;
+    throw new Error(why==='quotaExceeded'?'the daily YouTube search limit is used up, try again tomorrow or use Audius':(d.error&&d.error.message)||'request failed');
+  }
+  return (d.items||[]).filter(i=>i.id&&i.id.videoId).map(i=>({
+    src:'yt',id:i.id.videoId,title:decode(i.snippet.title),ch:decode(i.snippet.channelTitle),
+    img:(i.snippet.thumbnails&&i.snippet.thumbnails.default&&i.snippet.thumbnails.default.url)||'',dl:false}));
+}
+async function searchAU(q){
+  const r=await fetch(API+'/tracks/search?limit=20&query='+encodeURIComponent(q)+'&app_name='+APP);
+  if(!r.ok)throw new Error('Audius returned '+r.status);
+  const d=await r.json();
+  return (d.data||[]).filter(t=>t.id&&t.is_streamable!==false).map(t=>({
+    src:'au',id:t.id,title:t.title,ch:(t.user&&t.user.name)||'',
+    img:(t.artwork&&(t.artwork['150x150']||t.artwork['480x480']))||'',
+    dl:t.is_downloadable===true||!!(t.download&&t.download.is_downloadable===true)}));
+}
+
+async function doSearch(advance){
+  const q=$('q').value.trim();
+  if(!q)return;
+  if(advance){S.focus=((S.focus+2)%(PL.length+1))-1;S.target=S.focus>=0?PL[S.focus].h:210}
+  $('msg').textContent='Searching '+(source==='yt'?'YouTube':'Audius')+'…';
+  try{
+    results=source==='yt'?await searchYT(q):await searchAU(q);
+    idx=-1;
+    render();
+    $('msg').textContent=results.length?'':'Nothing out there. Try different words.';
+    if(results.length)play(0);
+  }catch(err){$('msg').textContent='Search failed: '+err.message+'.'}
+}
+$('f').addEventListener('submit',e=>{e.preventDefault();doSearch(true)});
+
+function render(){
+  const ul=$('list');ul.innerHTML='';
+  results.forEach((v,i)=>{
+    const li=document.createElement('li'),b=document.createElement('button');
+    li.style.animationDelay=(i*45)+'ms';
+    b.type='button';b.dataset.i=i;
+    b.innerHTML='<img alt=""><div><b></b><span></span></div>';
+    if(v.img)b.querySelector('img').src=v.img;
+    b.querySelector('b').textContent=v.title;
+    b.querySelector('span').textContent=v.ch+(v.dl?' · free download':'');
+    b.onclick=()=>play(i);
+    li.appendChild(b);ul.appendChild(li);
+  });
+}
+
+function play(i){
+  if(i<0||i>=results.length)return;
+  const v=results[i];
+  idx=i;cur=v.src;S.pulse=1;
+  document.querySelectorAll('li button').forEach(b=>b.classList.toggle('on',+b.dataset.i===i));
+  bar.style.display='flex';
+  $('now').textContent='Now playing: '+v.title+' by '+v.ch;
+  if(v.src==='au'&&v.dl){dl.href=API+'/tracks/'+encodeURIComponent(v.id)+'/download?app_name='+APP;dl.style.display='flex'}
+  else dl.style.display='none';
+  if(v.src==='yt'){
+    aud.pause();
+    $('ytwrap').style.display='block';
+    if(ytReady)yt.loadVideoById(v.id);else pending=i;
+  }else{
+    if(ytReady)yt.stopVideo();
+    pending=null;
+    $('ytwrap').style.display='none';
+    aud.src=API+'/tracks/'+encodeURIComponent(v.id)+'/stream?app_name='+APP;
+    aud.play().catch(()=>{$('now').textContent='Tap play to start: '+v.title});
+  }
+}
+</script>
+</body>
+</html>
+-origin-when-cross-origin">
 <title>Tune Finder</title>
 <style>
 :root{--h:320;--top:300px;--accent:hsl(var(--h) 100% 66%);--ink:#eef0ff;--muted:#c9cee3;--glass:transparent;--edge:rgba(255,255,255,.35);color-scheme:dark}
