@@ -356,7 +356,9 @@ requestAnimationFrame(frame);
 
 /* ---------- music (YouTube + Audius) ---------- */
 const KEY='AIzaSyDT1RhbmVLdxJHzTqU33Zm3t3Zy6rXvwx0';
-const API='https://api.audius.co/v1',APP='tune-finder';
+const PROXY='https://tunes.sinstixe.workers.dev';   // paste your relay address here (see the guide), for example 'https://tunes.yourname.workers.dev'
+const API=(PROXY?PROXY+'/a':'https://api.audius.co')+'/v1',APP='tune-finder';
+const px=u=>PROXY&&u?PROXY+'/i?u='+encodeURIComponent(u):u;
 const bar=$('bar'),pp=$('pp'),seek=$('seek'),tm=$('time'),dl=$('dl'),aud=$('aud');
 const PAUSE='&#x23F8;&#xFE0E;',PLAY='&#x25B6;&#xFE0E;';
 let source='yt',cur=null,results=[],idx=-1,yt=null,ytReady=false,pending=null,seeking=false;
@@ -457,9 +459,9 @@ async function searchAU(q){
   const d=await r.json();
   return (d.data||[]).filter(t=>t.id&&t.is_streamable!==false).map(t=>({
     src:'au',id:t.id,title:t.title,ch:(t.user&&t.user.name)||'',
-    img:(t.artwork&&(t.artwork['150x150']||t.artwork['480x480']))||'',
+    img:px((t.artwork&&(t.artwork['150x150']||t.artwork['480x480']))||''),
     dl:(t.is_downloadable===true||!!(t.download&&t.download.is_downloadable===true))&&!(t.download&&t.download.requires_follow===true),
-    dlUrl:(t.download&&t.download.url)||''}));
+    dlUrl:PROXY?'':((t.download&&t.download.url)||'')}));
 }
 
 async function doSearch(advance){
@@ -608,6 +610,7 @@ $('shr').onclick=async()=>{
   }catch(e){}
 })();
 
+if(PROXY&&document.querySelector){const a=document.querySelector('#src button[data-s="au"]');if(a)a.click()}   // behind a relay, start on Audius
 /* install as an app */
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;$('inst').style.display='inline-block'});
 $('inst').onclick=()=>{if(ip){ip.prompt();ip=null;$('inst').style.display='none'}};
