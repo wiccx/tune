@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
 <title>Tune Finder</title>
 <style>
 :root{--h:320;--top:300px;--accent:hsl(var(--h) 100% 66%);--ink:#eef0ff;--muted:#c9cee3;--glass:transparent;--edge:rgba(255,255,255,.35);color-scheme:dark}
@@ -29,6 +34,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .src button{background:transparent;color:var(--ink);border:1px solid var(--edge);box-shadow:none;padding:8px 16px;font-weight:600;text-shadow:none}
 .src button.on{border-color:var(--accent);box-shadow:0 0 14px -2px var(--accent)}
 .bar a.dl{display:none;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:1px solid var(--accent);border-radius:50%;color:var(--ink);text-decoration:none;font-size:1.05rem;text-shadow:none;box-shadow:0 0 12px -2px var(--accent)}
+.tools{display:none;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 6px}
+.tools button,.chips button{background:transparent;color:var(--ink);border:1px solid var(--edge);box-shadow:none;text-shadow:none}
+.tools button{padding:0;width:40px;height:40px;border-radius:50%;font-size:1rem}
+.tools button.on{border-color:var(--accent);box-shadow:0 0 12px -2px var(--accent)}
+.tools input{flex:1;min-width:90px;height:40px;padding:0;accent-color:var(--accent)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.chips button{padding:6px 14px;font-weight:600;font-size:.85rem}
 #ytwrap{display:none;aspect-ratio:16/9;border-radius:12px;overflow:hidden;margin:8px 0;border:1px solid var(--edge)}
 #ytwrap iframe{width:100%;height:100%;display:block}
 #now{margin:8px 2px 12px;color:var(--muted);min-height:1.4em}
@@ -55,10 +67,19 @@ li span{color:var(--muted);font-size:.85rem}
   <div id="src" class="src" role="group" aria-label="Music source">
     <button type="button" data-s="yt" class="on">YouTube</button>
     <button type="button" data-s="au">Audius</button>
+    <button type="button" data-s="fav">My music</button>
   </div>
-  <input id="q" type="search" placeholder="Song, artist or genre" aria-label="Search music" autocomplete="off">
+  <input id="q" list="rec" type="search" placeholder="Song, artist or genre" aria-label="Search music" autocomplete="off">
   <button>Search</button>
 </form>
+<datalist id="rec"></datalist>
+<div class="chips" id="moods">
+  <button type="button" data-m="lofi focus instrumental">Focus</button>
+  <button type="button" data-m="chill vibes">Chill</button>
+  <button type="button" data-m="workout energy">Workout</button>
+  <button type="button" data-m="party dance hits">Party</button>
+  <button type="button" id="inst" style="display:none">Install app</button>
+</div>
 <div id="bar" class="bar">
   <button id="prev" aria-label="Previous track">&#x23EE;&#xFE0E;</button>
   <button id="pp" aria-label="Play or pause">&#x25B6;&#xFE0E;</button>
@@ -66,6 +87,14 @@ li span{color:var(--muted);font-size:.85rem}
   <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek">
   <span id="time">0:00</span>
   <a id="dl" class="dl" href="#" target="_blank" rel="noopener" aria-label="Download this track" title="Free download">&#x2B07;&#xFE0E;</a>
+</div>
+<div id="tools" class="tools">
+  <button id="fav" aria-label="Save to My music">&#x2661;&#xFE0E;</button>
+  <button id="shuf" aria-label="Shuffle">&#x21C4;&#xFE0E;</button>
+  <button id="rep" aria-label="Repeat">&#x21BB;&#xFE0E;</button>
+  <button id="shr" aria-label="Share">&#x2934;&#xFE0E;</button>
+  <button id="slp" aria-label="Sleep timer">&#x23F2;&#xFE0E;</button>
+  <input id="vol" type="range" min="0" max="100" value="100" aria-label="Volume">
 </div>
 <audio id="aud"></audio>
 <div id="ytwrap"><div id="yt"></div></div>
@@ -335,6 +364,7 @@ const fmt=x=>isFinite(x)?Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(
 const decode=x=>{const t=document.createElement('textarea');t.innerHTML=x;return t.value};
 
 document.querySelectorAll('#src button').forEach(b=>b.onclick=()=>{
+  if(b.dataset.s==='fav'){document.querySelectorAll('#src button').forEach(x=>x.classList.toggle('on',x===b));showFavs();return}
   source=b.dataset.s;
   document.querySelectorAll('#src button').forEach(x=>x.classList.toggle('on',x===b));
   if($('q').value.trim())doSearch(false);
@@ -349,7 +379,7 @@ window.onYouTubeIframeAPIReady=()=>{
       if(cur!=='yt')return;
       S.playing=e.data===1;
       pp.innerHTML=e.data===1?PAUSE:PLAY;
-      if(e.data===0)play(idx+1);
+      if(e.data===0)autoNext();
     },
     onError:e=>{
       if(cur!=='yt')return;
@@ -365,7 +395,7 @@ window.onYouTubeIframeAPIReady=()=>{
 
 aud.addEventListener('play',()=>{if(cur==='au'){S.playing=true;pp.innerHTML=PAUSE}});
 aud.addEventListener('pause',()=>{if(cur==='au'){S.playing=false;pp.innerHTML=PLAY}});
-aud.addEventListener('ended',()=>{if(cur==='au')play(idx+1)});
+aud.addEventListener('ended',()=>{if(cur==='au')autoNext()});
 aud.addEventListener('error',()=>{if(cur==='au'&&aud.src)$('now').textContent='This track failed to load. Try another result.'});
 
 setInterval(()=>{
@@ -383,13 +413,31 @@ pp.onclick=()=>{
   if(cur==='au'){aud.paused?aud.play():aud.pause()}
   else if(ytReady){yt.getPlayerState()===1?yt.pauseVideo():yt.playVideo()}
 };
-$('prev').onclick=()=>play(idx-1);
-$('next').onclick=()=>play(idx+1);
+$('prev').onclick=prevTrack;
+$('next').onclick=nextTrack;
 seek.addEventListener('input',()=>{seeking=true});
 seek.addEventListener('change',()=>{
   if(cur==='au'){if(aud.duration)aud.currentTime=seek.value/1000*aud.duration}
   else if(ytReady){const d=yt.getDuration();if(d)yt.seekTo(seek.value/1000*d,true)}
   seeking=false;
+});
+
+const safeName=n=>String(n).replace(/[\\/:*?"<>|]/g,'');
+dl.addEventListener('click',async e=>{
+  e.preventDefault();
+  const url=dl.href,name=(dl.dataset.name||'track')+'.mp3',n=$('now'),old=n.textContent;
+  n.textContent='Preparing download…';
+  try{
+    const r=await fetch(url);
+    if(!r.ok)throw new Error('server said '+r.status);
+    const blob=await r.blob(),a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+    n.textContent='Download started: '+name;
+  }catch(err){
+    if(/server said/.test(String(err.message)))n.textContent='This track cannot be downloaded ('+err.message+'). The artist may have restricted it.';
+    else{window.open(url,'_blank','noopener');n.textContent=old}
+  }
 });
 
 async function searchYT(q){
@@ -410,7 +458,8 @@ async function searchAU(q){
   return (d.data||[]).filter(t=>t.id&&t.is_streamable!==false).map(t=>({
     src:'au',id:t.id,title:t.title,ch:(t.user&&t.user.name)||'',
     img:(t.artwork&&(t.artwork['150x150']||t.artwork['480x480']))||'',
-    dl:t.is_downloadable===true||!!(t.download&&t.download.is_downloadable===true)}));
+    dl:(t.is_downloadable===true||!!(t.download&&t.download.is_downloadable===true))&&!(t.download&&t.download.requires_follow===true),
+    dlUrl:(t.download&&t.download.url)||''}));
 }
 
 async function doSearch(advance){
@@ -418,7 +467,7 @@ async function doSearch(advance){
   if(!q)return;
   $('msg').textContent='Searching '+(source==='yt'?'YouTube':'Audius')+'…';
   try{
-    results=source==='yt'?await searchYT(q):await searchAU(q);
+    inFavs=false;addRecent(q);results=await cached(source,q,()=>source==='yt'?searchYT(q):searchAU(q));
     idx=-1;
     render();
     $('msg').textContent=results.length?'':'Nothing out there. Try different words.';
@@ -448,9 +497,9 @@ function play(i,retry){
   const v=results[i];
   idx=i;cur=v.src;S.pulse=1;
   document.querySelectorAll('li button').forEach(b=>b.classList.toggle('on',+b.dataset.i===i));
-  bar.style.display='flex';
+  bar.style.display='flex';afterPlay(v);
   $('now').textContent='Now playing: '+v.title+' by '+v.ch;
-  if(v.src==='au'&&v.dl){dl.href=API+'/tracks/'+encodeURIComponent(v.id)+'/download?app_name='+APP;dl.style.display='flex'}
+  if(v.src==='au'&&v.dl){dl.href=v.dlUrl||(API+'/tracks/'+encodeURIComponent(v.id)+'/download?app_name='+APP+'&filename='+encodeURIComponent(safeName(v.title)+'.mp3'));dl.dataset.name=safeName(v.title);dl.style.display='flex'}
   else dl.style.display='none';
   if(v.src==='yt'){
     aud.pause();
@@ -464,6 +513,105 @@ function play(i,retry){
     aud.play().catch(()=>{$('now').textContent='Tap play to start: '+v.title});
   }
 }
+
+/* ---------- extras: favourites, shuffle/repeat, lock screen, sleep, sharing, cache, install ---------- */
+const NAV=typeof navigator!=='undefined'?navigator:{};
+let favs=[],inFavs=false,ct=null,shuf=false,rep=0,slT=null,sli=0,ip=null;
+try{favs=JSON.parse(localStorage.getItem('tf_favs')||'[]')}catch(e){}
+const saveFavs=()=>{try{localStorage.setItem('tf_favs',JSON.stringify(favs))}catch(e){}};
+const isFav=v=>!!v&&favs.some(f=>f.src===v.src&&f.id===v.id);
+function paintFav(){$('fav').innerHTML=isFav(ct)?'&#x2665;&#xFE0E;':'&#x2661;&#xFE0E;';$('fav').classList.toggle('on',isFav(ct))}
+$('fav').onclick=()=>{
+  if(!ct)return;
+  if(isFav(ct))favs=favs.filter(f=>!(f.src===ct.src&&f.id===ct.id));else favs.unshift(ct);
+  saveFavs();paintFav();
+  if(inFavs){results=favs.slice();idx=results.findIndex(r=>r.src===ct.src&&r.id===ct.id);render()}
+};
+function showFavs(){
+  inFavs=true;results=favs.slice();idx=-1;render();
+  $('msg').textContent=favs.length?'':'Nothing saved yet. Tap the heart on a song to keep it here.';
+}
+
+/* next / previous / shuffle / repeat */
+function pick(d){
+  if(!results.length)return -1;
+  if(shuf&&results.length>1){let j;do{j=Math.floor(Math.random()*results.length)}while(j===idx);return j}
+  const j=idx+d;if(j>=results.length)return rep===1?0:-1;return Math.max(j,0);
+}
+function autoNext(){if(rep===2){S.prog=0;play(idx,true);return}const j=pick(1);if(j>=0)play(j)}
+function nextTrack(){const j=pick(1);if(j>=0)play(j)}
+function prevTrack(){play(idx>0?idx-1:0)}
+$('shuf').onclick=()=>{shuf=!shuf;$('shuf').classList.toggle('on',shuf)};
+$('rep').onclick=()=>{rep=(rep+1)%3;$('rep').classList.toggle('on',rep>0);$('rep').innerHTML=rep===2?'1':'&#x21BB;&#xFE0E;'};
+
+/* volume + sleep timer */
+$('vol').oninput=e=>{const v=e.target.value/100;aud.volume=v;if(ytReady)yt.setVolume(v*100)};
+$('slp').onclick=()=>{
+  sli=(sli+1)%4;clearTimeout(slT);const m=[0,15,30,60][sli];
+  $('slp').textContent=m?m:'\u23F2\uFE0E';$('slp').classList.toggle('on',!!m);
+  if(m)slT=setTimeout(()=>{aud.pause();if(ytReady)yt.pauseVideo();sli=0;$('slp').textContent='\u23F2\uFE0E';$('slp').classList.remove('on')},m*60000);
+};
+
+/* lock-screen / notification controls */
+function afterPlay(v){
+  ct=v;$('tools').style.display='flex';paintFav();
+  if(NAV.mediaSession&&typeof MediaMetadata!=='undefined')NAV.mediaSession.metadata=new MediaMetadata({title:v.title,artist:v.ch,artwork:v.img?[{src:v.img}]:[]});
+}
+if(NAV.mediaSession){
+  const h=(a,f)=>{try{NAV.mediaSession.setActionHandler(a,f)}catch(e){}};
+  h('play',()=>{if(!S.playing)pp.onclick()});h('pause',()=>{if(S.playing)pp.onclick()});
+  h('previoustrack',prevTrack);h('nexttrack',nextTrack);
+  h('seekto',d=>{if(cur==='au')aud.currentTime=d.seekTime;else if(ytReady)yt.seekTo(d.seekTime,true)});
+  setInterval(()=>{NAV.mediaSession.playbackState=S.playing?'playing':'paused'},500);
+}
+
+/* keyboard */
+addEventListener('keydown',e=>{
+  const t=e.target;if(t&&t.tagName==='INPUT'&&t.type!=='range')return;
+  const k=e.key.toLowerCase();
+  if(k===' '){e.preventDefault();pp.onclick()}
+  else if(k==='n'||k==='arrowright')nextTrack();
+  else if(k==='p'||k==='arrowleft')prevTrack();
+  else if(k==='f')$('fav').onclick();
+  else if(k==='s')$('shuf').onclick();
+  else if(k==='m'){aud.muted=!aud.muted;if(ytReady)aud.muted?yt.mute():yt.unMute()}
+});
+
+/* mood shortcuts */
+document.querySelectorAll('#moods button[data-m]').forEach(b=>b.onclick=()=>{$('q').value=b.dataset.m;doSearch(false)});
+
+/* recent searches + saved YouTube results (spares the daily limit) */
+function fillRec(r){const d=$('rec');d.innerHTML=r.map(x=>'<option value="'+x.replace(/"/g,'&quot;')+'">').join('')}
+function addRecent(q){let r=[];try{r=JSON.parse(localStorage.getItem('tf_rec')||'[]')}catch(e){}r=[q].concat(r.filter(x=>x!==q)).slice(0,8);try{localStorage.setItem('tf_rec',JSON.stringify(r))}catch(e){}fillRec(r)}
+try{fillRec(JSON.parse(localStorage.getItem('tf_rec')||'[]'))}catch(e){}
+async function cached(s,q,fn){
+  if(s!=='yt')return fn();
+  const k='tf_c:'+q.toLowerCase();
+  try{const c=JSON.parse(localStorage.getItem(k)||'null');if(c&&Date.now()-c.t<216e5)return c.d}catch(e){}
+  const d=await fn();
+  try{localStorage.setItem(k,JSON.stringify({t:Date.now(),d}))}catch(e){try{Object.keys(localStorage).filter(x=>x.indexOf('tf_c:')===0).forEach(x=>localStorage.removeItem(x))}catch(_){}}
+  return d;
+}
+
+/* sharing: a link that carries a song or your whole saved list */
+const enc=l=>btoa(unescape(encodeURIComponent(JSON.stringify(l.map(v=>[v.src,v.id,v.title,v.ch])))));
+$('shr').onclick=async()=>{
+  const l=inFavs&&favs.length?favs:(ct?[ct]:[]);if(!l.length)return;
+  const url=location.origin+location.pathname+'#l='+enc(l);
+  try{if(NAV.share)await NAV.share({title:'Tune Finder',url});else{await NAV.clipboard.writeText(url);$('now').textContent='Link copied'}}catch(e){}
+};
+(function(){
+  const h=location.hash;if(h.indexOf('#l=')!==0)return;
+  try{
+    results=JSON.parse(decodeURIComponent(escape(atob(h.slice(3))))).map(a=>({src:a[0],id:a[1],title:a[2],ch:a[3],img:'',dl:false,dlUrl:''}));
+    idx=-1;render();$('msg').textContent='Shared with you. Tap a song to play.';
+  }catch(e){}
+})();
+
+/* install as an app */
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;$('inst').style.display='inline-block'});
+$('inst').onclick=()=>{if(ip){ip.prompt();ip=null;$('inst').style.display='none'}};
+if('serviceWorker' in NAV&&/^https?:$/.test(location.protocol))NAV.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
