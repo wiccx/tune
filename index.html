@@ -34,7 +34,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .src button{background:transparent;color:var(--ink);border:1px solid var(--edge);box-shadow:none;padding:8px 16px;font-weight:600;text-shadow:none}
 .src button.on{border-color:var(--accent);box-shadow:0 0 14px -2px var(--accent)}
 .bar a.dl{display:none;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border:1px solid var(--accent);border-radius:50%;color:var(--ink);text-decoration:none;font-size:1.05rem;text-shadow:none;box-shadow:0 0 12px -2px var(--accent)}
-.tools{display:none;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 6px}
+.tools{display:none;flex-direction:column;gap:8px;margin:0 0 8px}
 .tools button,.chips button{background:transparent;color:var(--ink);border:1px solid var(--edge);box-shadow:none;text-shadow:none}
 .tools button{padding:0;width:40px;height:40px;border-radius:50%;font-size:1rem}
 .tools button.on{border-color:var(--accent);box-shadow:0 0 12px -2px var(--accent)}
@@ -50,6 +50,17 @@ li button.qb{width:46px;flex:none;padding:0;justify-content:center;font-size:1.3
 .vol input::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 0 10px var(--accent)}
 .vol input::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:0}
 #vpc{min-width:3em;text-align:right;font-size:.85rem}
+.trow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.trow.pills{justify-content:flex-start}
+.tools button,.bar button,.bar a.dl{display:inline-flex;align-items:center;justify-content:center}
+.tools button svg,.bar button svg,.bar a svg{pointer-events:none}
+.tools button b{font-size:.8rem}
+.tools button.wide{height:32px;font-size:.8rem}
+.tools .vol{max-width:240px;gap:8px;font-size:.75rem;opacity:.85}
+.vol input{height:28px;padding:12px 0;background:linear-gradient(to right,rgba(255,255,255,.65) var(--p,100%),rgba(255,255,255,.2) var(--p,100%));background-clip:content-box}
+.vol input::-webkit-slider-thumb{width:14px;height:14px;background:rgba(255,255,255,.9);box-shadow:none}
+.vol input::-moz-range-thumb{width:14px;height:14px;background:rgba(255,255,255,.9)}
+#vpc{min-width:2.6em;font-size:.75rem}
 #ytwrap{display:none;aspect-ratio:16/9;border-radius:12px;overflow:hidden;margin:8px 0;border:1px solid var(--edge)}
 #ytwrap iframe{width:100%;height:100%;display:block}
 #now{margin:8px 2px 12px;color:var(--muted);min-height:1.4em}
@@ -96,15 +107,19 @@ li span{color:var(--muted);font-size:.85rem}
   <a id="dl" class="dl" href="#" target="_blank" rel="noopener" aria-label="Download this track" title="Free download">&#x2B07;&#xFE0E;</a>
 </div>
 <div id="tools" class="tools">
-  <button id="fav" aria-label="Save to My music">&#x2661;&#xFE0E;</button>
-  <button id="shuf" aria-label="Shuffle">&#x21C4;&#xFE0E;</button>
-  <button id="rep" aria-label="Repeat">&#x21BB;&#xFE0E;</button>
-  <button id="shr" aria-label="Share">&#x2934;&#xFE0E;</button>
-  <button id="slp" aria-label="Sleep timer">&#x23F2;&#xFE0E;</button>
-  <button id="lyb" class="wide" aria-label="Lyrics">Lyrics</button>
-  <button id="spd" class="wide" aria-label="Playback speed">1&times;</button>
-  <button id="aut" class="wide on" aria-label="Keep playing similar songs">&#x221E; Auto</button>
-  <div class="vol"><span aria-hidden="true">Volume</span><input id="vol" type="range" min="0" max="100" value="100" style="--p:100%" aria-label="Volume"><span id="vpc">100%</span></div>
+  <div class="trow">
+    <button id="fav" aria-label="Save to My music"></button>
+    <button id="shuf" aria-label="Shuffle"></button>
+    <button id="rep" aria-label="Repeat"></button>
+    <button id="shr" aria-label="Share"></button>
+    <button id="slp" aria-label="Sleep timer"></button>
+  </div>
+  <div class="trow pills">
+    <button id="lyb" class="wide" aria-label="Lyrics">Lyrics</button>
+    <button id="spd" class="wide" aria-label="Playback speed">1&times;</button>
+    <button id="aut" class="wide on" aria-label="Keep playing similar songs">Auto</button>
+  </div>
+  <div class="vol"><span>Vol</span><input id="vol" type="range" min="0" max="100" value="100" style="--p:100%" aria-label="Volume"><span id="vpc">100%</span></div>
 </div>
 <div id="lyr" class="lyr"></div>
 <audio id="aud"></audio>
@@ -372,7 +387,12 @@ const PROXY='https://tunes.sinstixe.workers.dev';   // paste your relay address 
 const API=(PROXY?PROXY+'/a':'https://api.audius.co')+'/v1',APP='tune-finder';
 const px=u=>PROXY&&u?PROXY+'/i?u='+encodeURIComponent(u):u;
 const bar=$('bar'),pp=$('pp'),seek=$('seek'),tm=$('time'),dl=$('dl'),aud=$('aud');
-const PAUSE='&#x23F8;&#xFE0E;',PLAY='&#x25B6;&#xFE0E;';
+const ic=(d,f)=>'<svg viewBox="0 0 24 24" width="20" height="20" fill="'+(f?'currentColor':'none')+'" stroke="'+(f?'none':'currentColor')+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+d+'</svg>';
+const IC={play:ic('<path d="M8 5v14l11-7z"/>',1),pause:ic('<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>',1),prev:ic('<path d="M6 5h2v14H6zM20 5v14L9 12z"/>',1),next:ic('<path d="M16 5h2v14h-2zM4 5v14l11-7z"/>',1),
+ heart:ic('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.5 12 21 12 21z"/>'),heartOn:ic('<path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.5 12 21 12 21z"/>',1),
+ shuf:ic('<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>'),repeat:ic('<path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/>'),
+ share:ic('<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v14"/>'),timer:ic('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>'),dl:ic('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>')};
+const PAUSE=IC.pause,PLAY=IC.play;
 let source='yt',cur=null,results=[],idx=-1,yt=null,ytReady=false,pending=null,seeking=false;
 const fmt=x=>isFinite(x)?Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0'):'0:00';
 const decode=x=>{const t=document.createElement('textarea');t.innerHTML=x;return t.value};
@@ -536,7 +556,7 @@ let favs=[],inFavs=false,ct=null,shuf=false,rep=0,slT=null,sli=0,ip=null;
 try{favs=JSON.parse(localStorage.getItem('tf_favs')||'[]')}catch(e){}
 const saveFavs=()=>{try{localStorage.setItem('tf_favs',JSON.stringify(favs))}catch(e){}};
 const isFav=v=>!!v&&favs.some(f=>f.src===v.src&&f.id===v.id);
-function paintFav(){$('fav').innerHTML=isFav(ct)?'&#x2665;&#xFE0E;':'&#x2661;&#xFE0E;';$('fav').classList.toggle('on',isFav(ct))}
+function paintFav(){$('fav').innerHTML=isFav(ct)?IC.heartOn:IC.heart;$('fav').classList.toggle('on',isFav(ct))}
 $('fav').onclick=()=>{
   if(!ct)return;
   if(isFav(ct))favs=favs.filter(f=>!(f.src===ct.src&&f.id===ct.id));else favs.unshift(ct);
@@ -563,14 +583,14 @@ function autoNext(){
 function nextTrack(){if(queue.length){playQueued();return}const j=pick(1);if(j>=0)play(j);else if(autoMore&&!inFavs)loadMore()}
 function prevTrack(){play(idx>0?idx-1:0)}
 $('shuf').onclick=()=>{shuf=!shuf;$('shuf').classList.toggle('on',shuf)};
-$('rep').onclick=()=>{rep=(rep+1)%3;$('rep').classList.toggle('on',rep>0);$('rep').innerHTML=rep===2?'1':'&#x21BB;&#xFE0E;'};
+$('rep').onclick=()=>{rep=(rep+1)%3;$('rep').classList.toggle('on',rep>0);$('rep').innerHTML=rep===2?'<b>1</b>':IC.repeat};
 
 /* volume + sleep timer */
 $('vol').oninput=e=>{const v=e.target.value/100;aud.volume=v;if(ytReady)yt.setVolume(v*100);e.target.style.setProperty('--p',e.target.value+'%');$('vpc').textContent=e.target.value+'%'};
 $('slp').onclick=()=>{
   sli=(sli+1)%4;clearTimeout(slT);const m=[0,15,30,60][sli];
-  $('slp').textContent=m?m:'\u23F2\uFE0E';$('slp').classList.toggle('on',!!m);
-  if(m)slT=setTimeout(()=>{aud.pause();if(ytReady)yt.pauseVideo();sli=0;$('slp').textContent='\u23F2\uFE0E';$('slp').classList.remove('on')},m*60000);
+  $('slp').innerHTML=m?'<b>'+m+'</b>':IC.timer;$('slp').classList.toggle('on',!!m);
+  if(m)slT=setTimeout(()=>{aud.pause();if(ytReady)yt.pauseVideo();sli=0;$('slp').innerHTML=IC.timer;$('slp').classList.remove('on')},m*60000);
 };
 
 /* lock-screen / notification controls */
@@ -700,6 +720,7 @@ $('ffile').onchange=e=>{
   r.onload=()=>{try{const l=JSON.parse(r.result);let n=0;for(const v of l)if(v&&v.src&&v.id&&!favs.some(x=>x.src===v.src&&x.id===v.id)){favs.push(v);n++}saveFavs();showFavs();$('msg').textContent='Imported '+n+' songs.'}catch(_){$('msg').textContent='That file could not be read.'}};
   r.readAsText(f);e.target.value='';
 };
+$('prev').innerHTML=IC.prev;$('next').innerHTML=IC.next;pp.innerHTML=IC.play;$('shuf').innerHTML=IC.shuf;$('rep').innerHTML=IC.repeat;$('shr').innerHTML=IC.share;$('slp').innerHTML=IC.timer;dl.innerHTML=IC.dl;paintFav();
 </script>
 </body>
 </html>
