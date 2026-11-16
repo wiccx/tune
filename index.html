@@ -74,10 +74,6 @@ li span{color:var(--muted);font-size:.85rem}
 </form>
 <datalist id="rec"></datalist>
 <div class="chips" id="moods">
-  <button type="button" data-m="lofi focus instrumental">Focus</button>
-  <button type="button" data-m="chill vibes">Chill</button>
-  <button type="button" data-m="workout energy">Workout</button>
-  <button type="button" data-m="party dance hits">Party</button>
   <button type="button" id="inst" style="display:none">Install app</button>
 </div>
 <div id="bar" class="bar">
@@ -578,9 +574,6 @@ addEventListener('keydown',e=>{
   else if(k==='s')$('shuf').onclick();
   else if(k==='m'){aud.muted=!aud.muted;if(ytReady)aud.muted?yt.mute():yt.unMute()}
 });
-
-/* mood shortcuts */
-document.querySelectorAll('#moods button[data-m]').forEach(b=>b.onclick=()=>{$('q').value=b.dataset.m;doSearch(false)});
 
 /* recent searches + saved YouTube results (spares the daily limit) */
 function fillRec(r){const d=$('rec');d.innerHTML=r.map(x=>'<option value="'+x.replace(/"/g,'&quot;')+'">').join('')}
