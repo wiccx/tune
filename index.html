@@ -45,6 +45,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline
 .lyr{display:none;white-space:pre-wrap;max-height:38vh;overflow:auto;margin:0 0 8px;padding:10px 12px;border:1px solid var(--edge);border-radius:14px;line-height:1.6}
 li{display:flex;gap:6px;align-items:stretch}
 li button.qb{width:46px;flex:none;padding:0;justify-content:center;font-size:1.3rem}
+.tools .vol{flex:0 0 100%;display:flex;align-items:center;gap:10px;color:var(--muted)}
+.vol input{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:40px;padding:17px 0;box-sizing:border-box;border:0;border-radius:3px;background:linear-gradient(to right,var(--accent) var(--p,100%),rgba(255,255,255,.3) var(--p,100%));background-clip:content-box}
+.vol input::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 0 10px var(--accent)}
+.vol input::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:0}
+#vpc{min-width:3em;text-align:right;font-size:.85rem}
 #ytwrap{display:none;aspect-ratio:16/9;border-radius:12px;overflow:hidden;margin:8px 0;border:1px solid var(--edge)}
 #ytwrap iframe{width:100%;height:100%;display:block}
 #now{margin:8px 2px 12px;color:var(--muted);min-height:1.4em}
@@ -99,7 +104,7 @@ li span{color:var(--muted);font-size:.85rem}
   <button id="lyb" class="wide" aria-label="Lyrics">Lyrics</button>
   <button id="spd" class="wide" aria-label="Playback speed">1&times;</button>
   <button id="aut" class="wide on" aria-label="Keep playing similar songs">&#x221E; Auto</button>
-  <input id="vol" type="range" min="0" max="100" value="100" aria-label="Volume">
+  <div class="vol"><span aria-hidden="true">Volume</span><input id="vol" type="range" min="0" max="100" value="100" style="--p:100%" aria-label="Volume"><span id="vpc">100%</span></div>
 </div>
 <div id="lyr" class="lyr"></div>
 <audio id="aud"></audio>
@@ -561,7 +566,7 @@ $('shuf').onclick=()=>{shuf=!shuf;$('shuf').classList.toggle('on',shuf)};
 $('rep').onclick=()=>{rep=(rep+1)%3;$('rep').classList.toggle('on',rep>0);$('rep').innerHTML=rep===2?'1':'&#x21BB;&#xFE0E;'};
 
 /* volume + sleep timer */
-$('vol').oninput=e=>{const v=e.target.value/100;aud.volume=v;if(ytReady)yt.setVolume(v*100)};
+$('vol').oninput=e=>{const v=e.target.value/100;aud.volume=v;if(ytReady)yt.setVolume(v*100);e.target.style.setProperty('--p',e.target.value+'%');$('vpc').textContent=e.target.value+'%'};
 $('slp').onclick=()=>{
   sli=(sli+1)%4;clearTimeout(slT);const m=[0,15,30,60][sli];
   $('slp').textContent=m?m:'\u23F2\uFE0E';$('slp').classList.toggle('on',!!m);
@@ -571,7 +576,7 @@ $('slp').onclick=()=>{
 /* lock-screen / notification controls */
 function afterPlay(v){
   ct=v;$('tools').style.display='flex';paintFav();
-  aud.defaultPlaybackRate=rates[ri];aud.playbackRate=rates[ri];setTimeout(()=>{if(ytReady)yt.setPlaybackRate(rates[ri])},1500);
+  aud.defaultPlaybackRate=rates[ri];aud.playbackRate=rates[ri];setTimeout(()=>{if(ytReady){yt.setPlaybackRate(rates[ri]);yt.setVolume(+$('vol').value)}},1500);
   if($('lyr').style.display==='block')showLyrics();
   if(NAV.mediaSession&&typeof MediaMetadata!=='undefined')NAV.mediaSession.metadata=new MediaMetadata({title:v.title,artist:v.ch,artwork:v.img?[{src:v.img}]:[]});
 }
@@ -633,7 +638,8 @@ if('serviceWorker' in NAV&&/^https?:$/.test(location.protocol))NAV.serviceWorker
 const AR=PROXY?PROXY+'/x':'https://archive.org',LRC=PROXY?PROXY+'/l':'https://lrclib.net/api';
 let queue=[],autoMore=true,ri=0,an=null,ac=null,fd=null;
 const rates=[1,1.25,1.5,2,.75],iOS=/iP(hone|ad|od)/.test(NAV.userAgent||'');
-if(PROXY)aud.crossOrigin='anonymous';
+const BEAT=false;   // planets pulsing to the bass: switched off
+if(PROXY&&BEAT)aud.crossOrigin='anonymous';
 
 /* Internet Archive: a third catalog */
 async function searchAR(q){
@@ -651,6 +657,7 @@ async function arFile(id){
 
 /* planets pulse with the bass (needs the relay for cross-origin audio; skipped on iPhone, where it can cut off lock-screen playback) */
 function startBeat(){
+  if(!BEAT)return;
   if(ac){ac.resume();return}
   if(!PROXY||iOS)return;
   try{ac=new(window.AudioContext||window.webkitAudioContext)();an=ac.createAnalyser();an.fftSize=256;fd=new Uint8Array(an.frequencyBinCount);ac.createMediaElementSource(aud).connect(an);an.connect(ac.destination);ac.resume()}catch(e){an=null}
